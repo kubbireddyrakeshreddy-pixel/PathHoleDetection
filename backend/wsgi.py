@@ -17,6 +17,14 @@ def seed_admins():
                            name='Srikar Reddy', department='Chennai Municipal Corp', phone='9059581270',
                            lat_min=12.8, lat_max=13.3, lng_min=80.0, lng_max=80.4)
                 db.session.add(a2)
+                
+            # Super Admin
+            if not Admin.query.filter_by(email='kubbireddyrakeshreddy@gmail.com').first():
+                a3 = Admin(email='kubbireddyrakeshreddy@gmail.com', password_hash=generate_password_hash('R1234'),
+                           name='Rakesh Reddy', department='Super Admin', phone='9059581270',
+                           lat_min=None, lat_max=None, lng_min=None, lng_max=None)
+                db.session.add(a3)
+                
             db.session.commit()
             print("Admins seeded successfully!")
         except Exception as e:

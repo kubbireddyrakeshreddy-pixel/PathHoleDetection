@@ -39,6 +39,9 @@ from flask_jwt_extended import (
 )
 from werkzeug.utils import secure_filename
 
+import cloudinary
+import cloudinary.uploader
+
 import detector
 import email_service
 from models import db, User, Admin, Report, StatusLog
@@ -294,6 +297,18 @@ def create_report():
     ann_path, ann_filename = save_annotated(
         result["annotated_bytes"], orig_filename.rsplit(".", 1)[0]
     )
+    
+    orig_url = orig_filename
+    ann_url = ann_filename
+    
+    if os.getenv("CLOUDINARY_URL"):
+        try:
+            res1 = cloudinary.uploader.upload(orig_path)
+            orig_url = res1.get("secure_url")
+            res2 = cloudinary.uploader.upload(ann_path)
+            ann_url = res2.get("secure_url")
+        except Exception as e:
+            print("Cloudinary upload failed:", e)
 
     # Find responsible admin
     user_id = int(get_jwt_identity())
@@ -303,8 +318,8 @@ def create_report():
     report = Report(
         user_id          = user_id,
         admin_id         = admin.id if admin else None,
-        original_image   = orig_filename,
-        annotated_image  = ann_filename,
+        original_image   = orig_url,
+        annotated_image  = ann_url,
         latitude         = lat,
         longitude        = lng,
         address          = address,
@@ -363,9 +378,12 @@ def list_reports():
         reports = Report.query.filter_by(user_id=user_id)\
                               .order_by(Report.created_at.desc()).all()
     else:
-        # Admin sees all reports assigned to them
-        reports = Report.query.filter_by(admin_id=user_id)\
-                              .order_by(Report.created_at.desc()).all()
+        admin = Admin.query.get(user_id)
+        if admin and admin.lat_min is None:
+            reports = Report.query.order_by(Report.created_at.desc()).all()
+        else:
+            reports = Report.query.filter_by(admin_id=user_id)\
+                                  .order_by(Report.created_at.desc()).all()
 
     return jsonify([r.to_dict() for r in reports])
 
@@ -417,6 +435,25 @@ def update_status(report_id):
 
     return jsonify(report.to_dict(include_logs=True))
 
+@app.route("/api/reports/<int:report_id>", methods=["DELETE"])
+@require_role("admin")
+def delete_report(report_id):
+    """Super Admin deletes a report."""
+    admin_id = int(get_jwt_identity())
+    admin = Admin.query.get(admin_id)
+    if admin is None or admin.lat_min is not None:
+        return jsonify({"error": "Only Super Admins can delete reports"}), 403
+        
+    report = Report.query.get_or_404(report_id)
+    
+    # Delete associated status logs
+    StatusLog.query.filter_by(report_id=report.id).delete()
+    
+    db.session.delete(report)
+    db.session.commit()
+    
+    return jsonify({"message": "Report deleted successfully"}), 200
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Admin Dashboard Stats
@@ -425,7 +462,12 @@ def update_status(report_id):
 @require_role("admin")
 def admin_stats():
     admin_id = int(get_jwt_identity())
-    base     = Report.query.filter_by(admin_id=admin_id)
+    admin = Admin.query.get(admin_id)
+    if admin and admin.lat_min is None:
+        base = Report.query
+    else:
+        base = Report.query.filter_by(admin_id=admin_id)
+        
     return jsonify({
         "total":       base.count(),
         "reported":    base.filter_by(status=Report.STATUS_REPORTED).count(),

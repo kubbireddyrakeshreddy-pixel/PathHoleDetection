@@ -11,3 +11,4 @@ numpy
 gunicorn
 torch
 torchvision
+cloudinary

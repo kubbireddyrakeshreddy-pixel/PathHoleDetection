@@ -93,11 +93,16 @@ const API = (() => {
     async stats() {
       return req('GET', '/admin/stats');
     },
+    async deleteReport(id) {
+      return req('DELETE', `/reports/${id}`);
+    }
   };
 
   // ── Images ────────────────────────────────────────────────────────────
   function imageUrl(filename) {
-    return `/api/images/${filename}`;
+    if (!filename) return '';
+    if (filename.startsWith('http')) return filename;
+    return `${BASE}/images/${filename}`;
   }
 
   // ── Expose ────────────────────────────────────────────────────────────

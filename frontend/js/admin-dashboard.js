@@ -135,14 +135,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       <!-- Status Action Buttons -->
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
         ${r.status === 'reported'
-          ? `<button class="btn btn-warning btn-sm status-btn" data-id="${r.id}" data-status="reviewed">👁️ Mark Reviewed</button>` : ''}
+          ? `<button class="btn btn-warning btn-sm status-btn" data-id="${r.id}" data-status="reviewed">👀 Mark Reviewed</button>` : ''}
         ${r.status === 'reviewed'
-          ? `<button class="btn btn-info btn-sm status-btn" data-id="${r.id}" data-status="in_progress">🔧 Work in Progress</button>` : ''}
+          ? `<button class="btn btn-info btn-sm status-btn" data-id="${r.id}" data-status="in_progress">🚧 Work in Progress</button>` : ''}
         ${r.status === 'in_progress'
           ? `<button class="btn btn-success btn-sm status-btn" data-id="${r.id}" data-status="repaired">✅ Mark Repaired</button>` : ''}
         ${r.status !== 'repaired'
-          ? `<button class="btn btn-ghost btn-sm" onclick="openStatusModal(${r.id},'${r.status}','${(r.admin_notes||'').replace(/'/g,"\\'")}')">💬 Add Notes</button>` : ''}
-        <a href="${mapsUrl}" target="_blank" class="btn btn-ghost btn-sm">🗺️ View on Map</a>
+          ? `<button class="btn btn-ghost btn-sm" onclick="openStatusModal(${r.id},'${r.status}','${(r.admin_notes||'').replace(/'/g,"\\'")}')">📝 Add Notes</button>` : ''}
+        <a href="${mapsUrl}" target="_blank" class="btn btn-ghost btn-sm">📍 View on Map</a>
+        <button class="btn btn-danger btn-sm delete-btn" data-id="${r.id}">🗑 Delete</button>
       </div>
     </div>`;
   }
@@ -152,14 +153,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.addEventListener('click', async () => {
         const id     = btn.dataset.id;
         const status = btn.dataset.status;
-        btn.disabled = true; btn.textContent = 'Updating…';
+        btn.disabled = true; btn.textContent = 'Updating...';
         try {
           await API.Reports.updateStatus(id, status);
           Toast.success(`Status updated to: ${StatusHelper.label(status)}`);
           loadStats(); loadReports();
-        } catch (err) {
-          Toast.error(err.message || 'Update failed.');
+        } catch (e) {
+          Toast.error(e.message);
           btn.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm("Are you sure you want to delete this report?")) return;
+        const id = btn.dataset.id;
+        btn.disabled = true; btn.textContent = 'Deleting...';
+        try {
+          await API.Admin.deleteReport(id);
+          Toast.success('Report deleted successfully');
+          loadStats(); loadReports();
+        } catch (e) {
+          Toast.error(e.message);
+          btn.disabled = false; btn.textContent = '🗑 Delete';
         }
       });
     });
