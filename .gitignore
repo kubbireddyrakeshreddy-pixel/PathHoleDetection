@@ -1,0 +1,14 @@
+backend/.env
+
+__pycache__/
+*.py[cod]
+
+backend/instance/
+backend/uploads/
+
+venv/
+.venv/
+env/
+
+.ipynb_checkpoints/
+*.log

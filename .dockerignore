@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.git/
+.vscode/
+backend/uploads/
+backend/pothole_system.db
+node_modules/
+.venv/
+venv/

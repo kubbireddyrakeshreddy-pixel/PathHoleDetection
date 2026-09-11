@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — RoadSafe Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    .page-section { display:none; }
+    .page-section.active { display:block; animation:fadeIn 0.3s ease; }
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+    #leafletMap { width:100%; height:480px; border-radius:var(--radius-md); border:1px solid var(--border); }
+    .filter-bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="/" class="navbar-brand"><div class="navbar-logo">🛣️</div>Road<span>Safe</span> <span style="font-size:12px;color:var(--secondary);margin-left:4px">Admin</span></a>
+  <div class="navbar-spacer"></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div id="liveClock" style="font-size:14px;color:var(--text-secondary);font-weight:500;padding-right:16px;border-right:1px solid var(--border)"></div>
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--secondary),#1d4ed8);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px" id="adminInitial">A</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;line-height:1.2" id="adminName">Officer</div>
+          <div style="font-size:11px;color:var(--text-muted)" id="adminDept"></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn">Logout</button>
+  </div>
+</nav>
+
+<!-- Status Update Modal -->
+<div class="modal-overlay" id="statusModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Update Report Status</h3>
+      <button class="modal-close" onclick="closeStatusModal()">✕</button>
+    </div>
+    <p style="color:var(--text-secondary);font-size:14px;margin-bottom:20px">
+      Report <strong>#<span id="modalReportId"></span></strong> — Current:
+      <span id="modalCurrentStatus" class="badge"></span>
+    </p>
+    <div class="form-group">
+      <label class="form-label">New Status</label>
+      <select id="modalStatusSelect" class="form-control">
+        <option value="reviewed">🟡 Reviewed</option>
+        <option value="in_progress">🔵 Work in Progress</option>
+        <option value="repaired">🟢 Road Repaired</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <textarea id="modalNotes" class="form-control" rows="3" placeholder="Add any notes for the citizen…" style="resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeStatusModal()">Cancel</button>
+      <button class="btn btn-primary" id="modalSubmitBtn">Update Status</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal-overlay" id="imageModal" onclick="if(event.target===this)closeImageModal()">
+  <div class="modal-box" style="max-width:800px;padding:16px">
+    <div class="modal-header">
+      <h3>Pothole Image</h3>
+      <button class="modal-close" onclick="closeImageModal()">✕</button>
+    </div>
+    <img id="modalFullImg" style="width:100%;border-radius:var(--radius-md)">
+  </div>
+</div>
+
+<!-- Dashboard Layout -->
+<div class="page-wrapper">
+  <div class="dashboard-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-item active" data-nav="dashboard" href="#">
+        <span class="sidebar-icon">📊</span> Dashboard
+      </a>
+      <a class="sidebar-item" data-nav="reports" href="#">
+        <span class="sidebar-icon">📋</span> All Reports
+      </a>
+      <a class="sidebar-item" data-nav="map" href="#">
+        <span class="sidebar-icon">🗺️</span> Map View
+      </a>
+      <div class="sidebar-section" style="margin-top:16px">Account</div>
+      <a class="sidebar-item" data-nav="profile" href="#">
+        <span class="sidebar-icon">👤</span> My Profile
+      </a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ── Dashboard Overview ──────────────────────────────────── -->
+      <section class="page-section active" id="sec-dashboard">
+        <div class="page-header">
+          <h1 style="font-size:1.8rem">📊 Dashboard Overview</h1>
+          <p style="color:var(--text-secondary);margin-top:6px">Reports in your geographic zone.</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card" style="--accent-color:var(--primary)">
+            <div class="stat-icon">📁</div>
+            <div class="stat-value" id="statTotal">–</div>
+            <div class="stat-label">Total Reports</div>
+          </div>
+          <div class="stat-card" style="--accent-color:var(--danger)">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-value" id="statPending">–</div>
+            <div class="stat-label">Pending Review</div>
+          </div>
+          <div class="stat-card" style="--accent-color:var(--info)">
+            <div class="stat-icon">🔧</div>
+            <div class="stat-value" id="statProgress">–</div>
+            <div class="stat-label">In Progress</div>
+          </div>
+          <div class="stat-card" style="--accent-color:var(--success)">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="statFixed">–</div>
+            <div class="stat-label">Roads Repaired</div>
+          </div>
+        </div>
+
+        <!-- Recent Reports -->
+        <div class="glass-card" style="padding:0;overflow:hidden">
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <h3 style="font-size:1rem">Recent Reports</h3>
+            <button class="btn btn-ghost btn-sm" onclick="document.querySelector('[data-nav=reports]').click()">View All →</button>
+          </div>
+          <div id="recentReports" style="padding:16px"></div>
+        </div>
+      </section>
+
+      <!-- ── All Reports ──────────────────────────────────────────── -->
+      <section class="page-section" id="sec-reports">
+        <div class="page-header">
+          <h1 style="font-size:1.8rem">📋 All Reports</h1>
+        </div>
+        <div class="filter-bar">
+          <label style="font-size:13px;font-weight:600;color:var(--text-secondary)">Filter by Status:</label>
+          <select id="filterStatus" class="form-control" style="width:auto;padding:8px 14px">
+            <option value="">All Reports</option>
+            <option value="reported">🔴 Reported</option>
+            <option value="reviewed">🟡 Reviewed</option>
+            <option value="in_progress">🔵 In Progress</option>
+            <option value="repaired">🟢 Repaired</option>
+          </select>
+        </div>
+        <div class="glass-card" style="padding:0;overflow:hidden">
+          <div id="allReportsTable" style="padding:16px;overflow-x:auto"></div>
+        </div>
+      </section>
+
+      <!-- ── Map View ──────────────────────────────────────────────── -->
+      <section class="page-section" id="sec-map">
+        <div class="page-header">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+            <div>
+              <h1 style="font-size:1.8rem">🗺️ Live Map View</h1>
+              <p style="color:var(--text-secondary);margin-top:6px">
+                Pothole locations are pinned automatically when citizens upload reports.
+                Click any pin to see details & photo.
+              </p>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+              <button class="btn btn-primary btn-sm" id="refreshMapBtn">🔄 Refresh Now</button>
+              <span id="mapReportCount" style="font-size:12px;color:var(--text-muted)">Loading…</span>
+              <span id="mapLastRefresh" style="font-size:11px;color:var(--text-muted)"></span>
+              <span id="mapCountdown"   style="font-size:11px;color:var(--accent-green)"></span>
+            </div>
+          </div>
+        </div>
+        <div class="glass-card" style="padding:16px">
+          <!-- Legend -->
+          <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+            <span style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em">Active Potholes:</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px">
+              <span style="width:14px;height:14px;border-radius:50%;background:#ef4444;display:inline-block;border:2px solid white;box-shadow:0 0 0 2px rgba(239,68,68,0.4)"></span>Reported (new)
+            </span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px">
+              <span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block"></span>Reviewed
+            </span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px">
+              <span style="width:12px;height:12px;border-radius:50%;background:#3b82f6;display:inline-block"></span>In Progress
+            </span>
+            <span style="font-size:12px;color:var(--text-muted);margin-left:8px">
+              ✅ Repaired roads are automatically removed from the map.
+            </span>
+          </div>
+          <div id="leafletMap"></div>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:10px;text-align:center">
+            🔁 Map auto-refreshes every <strong>30 seconds</strong>. New pothole reports appear automatically.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── Profile ───────────────────────────────────────────────── -->
+      <section class="page-section" id="sec-profile">
+        <div class="page-header">
+          <h1 style="font-size:1.8rem">👤 My Profile</h1>
+        </div>
+        <div class="glass-card" style="padding:28px;max-width:520px" id="profileCard">
+          <div id="profileContent" style="color:var(--text-secondary)">Loading…</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/api.js?v=2"></script>
+<script src="js/admin-dashboard.js?v=2"></script>
+<script>
+  // Profile tab
+  document.querySelector('[data-nav="profile"]').addEventListener('click', () => {
+    const a = API.getUser();
+    if (a) {
+      const rows = [
+        ['Full Name',   a.name],
+        ['Email',       a.email],
+        ['Phone',       a.phone],
+        ['Department',  a.department],
+        ['Pincode',     a.pincode || '–'],
+        ['Zone Lat',    a.lat_min != null ? `${a.lat_min} → ${a.lat_max}` : '–'],
+        ['Zone Lng',    a.lng_min != null ? `${a.lng_min} → ${a.lng_max}` : '–'],
+      ];
+      document.getElementById('profileContent').innerHTML = rows.map(([l,v]) =>
+        `<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em">${l}</span>
+          <span style="font-weight:600">${v||'–'}</span>
+        </div>`).join('');
+    }
+  });
+</script>
+</body>
+</html>

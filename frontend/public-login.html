@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Citizen Login — RoadSafe Portal</title>
+  <meta name="description" content="Login or register as a citizen to report road potholes and track repair progress.">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .auth-panel {
+      display: flex; align-items: center; justify-content: center;
+      padding: 60px 48px;
+    }
+    .auth-left {
+      background: linear-gradient(135deg, #0a1628 0%, #162444 100%);
+      position: relative; overflow: hidden;
+    }
+    .auth-left::before {
+      content:''; position:absolute; top:-30%; left:-20%;
+      width:700px; height:700px; border-radius:50%;
+      background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, transparent 65%);
+    }
+    .auth-left-content { position:relative; z-index:1; max-width:480px; }
+    .auth-illustration { font-size:5rem; margin-bottom:24px; display:block; }
+    .auth-tagline { font-size:clamp(1.8rem,3vw,2.6rem); font-weight:800; line-height:1.15; margin-bottom:16px; }
+    .auth-features { list-style:none; margin-top:32px; display:flex; flex-direction:column; gap:14px; }
+    .auth-features li {
+      display:flex; align-items:center; gap:12px;
+      color:var(--text-secondary); font-size:15px;
+    }
+    .auth-features li::before { content:'✓'; color:var(--accent-green); font-weight:900; }
+    .auth-box { width:100%; max-width:460px; }
+    .auth-box-header { margin-bottom:32px; }
+    .auth-box-title { font-size:1.8rem; font-weight:800; margin-bottom:8px; }
+    .auth-box-sub   { color:var(--text-secondary); font-size:15px; }
+    .tabs-auth { margin-bottom:28px; }
+    .divider { text-align:center; color:var(--text-muted); font-size:13px; position:relative; margin:24px 0; }
+    .divider::before, .divider::after {
+      content:''; position:absolute; top:50%; width:40%; height:1px;
+      background:var(--border);
+    }
+    .divider::before { left:0; } .divider::after { right:0; }
+    .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--text-muted); font-size:13px; text-decoration:none; margin-bottom:32px; transition:color 0.2s; }
+    .back-link:hover { color:var(--primary); }
+    .password-wrap { position:relative; }
+    .password-toggle { position:absolute; right:14px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px; }
+
+    @media(max-width:768px) {
+      .auth-page { grid-template-columns:1fr; }
+      .auth-left  { display:none; }
+      .auth-panel { padding:80px 24px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/" class="navbar-brand">
+    <div class="navbar-logo">🛣️</div>
+    Road<span>Safe</span>
+  </a>
+  <div class="navbar-spacer"></div>
+  <a href="admin-login.html" class="btn btn-ghost btn-sm">Admin Portal →</a>
+</nav>
+
+<div class="auth-page" style="margin-top:68px">
+
+  <!-- Left panel -->
+  <div class="auth-panel auth-left">
+    <div class="auth-left-content">
+      <span class="auth-illustration">🏙️</span>
+      <h2 class="auth-tagline">Help Fix <span class="gradient-text">India's Roads</span></h2>
+      <p style="color:var(--text-secondary);font-size:16px">
+        Report potholes in seconds. Track when they get fixed. Make your roads safer.
+      </p>
+      <ul class="auth-features">
+        <li>Upload road images with auto GPS tagging</li>
+        <li>Instant AI pothole detection</li>
+        <li>Automatic government notification</li>
+        <li>Real-time repair progress tracking</li>
+        <li>Email updates at every status change</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="auth-panel" style="background:var(--bg-base)">
+    <div class="auth-box">
+      <a href="/" class="back-link">← Back to Home</a>
+      <div class="auth-box-header">
+        <div style="font-size:2rem;margin-bottom:12px">👤</div>
+        <h1 class="auth-box-title">Citizen Portal</h1>
+        <p class="auth-box-sub">Login or create a free account to get started.</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs tabs-auth" id="authTabs">
+        <button class="tab-btn active" data-tab="login">Login</button>
+        <button class="tab-btn" data-tab="register">Register</button>
+      </div>
+
+      <!-- Alert area -->
+      <div id="authAlert"></div>
+
+      <!-- ── Login Form ───────────────────────────────────── -->
+      <div class="tab-content active" id="tab-login">
+        <form id="loginForm">
+          <div class="form-group">
+            <label class="form-label">Email or Username</label>
+            <input id="loginEmail" class="form-control" type="text" placeholder="your@email.com or username" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="password-wrap">
+              <input id="loginPassword" class="form-control" type="password" placeholder="••••••••" required>
+              <button type="button" class="password-toggle" onclick="togglePass('loginPassword',this)">👁️</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
+            Login to RoadSafe
+          </button>
+        </form>
+        <div class="divider">or</div>
+        <button class="btn btn-ghost btn-block" onclick="switchTab('register')">Create a new account →</button>
+      </div>
+
+      <!-- ── Register Form ────────────────────────────────── -->
+      <div class="tab-content" id="tab-register">
+        <form id="registerForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input id="regName" class="form-control" type="text" placeholder="Rajesh Kumar" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input id="regUsername" class="form-control" type="text" placeholder="rajesh123" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input id="regEmail" class="form-control" type="email" placeholder="rajesh@email.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mobile Number</label>
+            <input id="regPhone" class="form-control" type="tel" placeholder="+91 98765 43210" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="password-wrap">
+              <input id="regPassword" class="form-control" type="password" placeholder="Min 8 characters" required minlength="8">
+              <button type="button" class="password-toggle" onclick="togglePass('regPassword',this)">👁️</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input id="regConfirm" class="form-control" type="password" placeholder="Repeat password" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerBtn">
+            Create My Account
+          </button>
+          <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:12px">
+            By registering, you agree to report accurate road damage information.
+          </p>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  // Redirect if already logged in
+  if (API.Auth.isLoggedIn() && API.getRole() === 'user') {
+    window.location.href = 'public-dashboard.html';
+  }
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${name}`));
+    document.getElementById('authAlert').innerHTML = '';
+  }
+
+  // Password toggle
+  function togglePass(id, btn) {
+    const inp = document.getElementById(id);
+    inp.type  = inp.type === 'password' ? 'text' : 'password';
+    btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
+  }
+
+  // Show alert
+  function showAlert(msg, type = 'error') {
+    document.getElementById('authAlert').innerHTML =
+      `<div class="alert alert-${type}">${msg}</div>`;
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Please wait…' : btn.defaultText;
+  }
+
+  // ── Login ──────────────────────────────────────────────────────────────
+  document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = 'Logging in…';
+    try {
+      await API.Auth.loginUser({
+        email:    document.getElementById('loginEmail').value.trim(),
+        password: document.getElementById('loginPassword').value,
+      });
+      Toast.success('Welcome back! Redirecting…');
+      setTimeout(() => window.location.href = 'public-dashboard.html', 800);
+    } catch (err) {
+      showAlert(err.message || 'Login failed. Check your credentials.');
+      btn.disabled = false; btn.textContent = 'Login to RoadSafe';
+    }
+  });
+
+  // ── Register ───────────────────────────────────────────────────────────
+  document.getElementById('registerForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('registerBtn');
+    const pass = document.getElementById('regPassword').value;
+    const conf = document.getElementById('regConfirm').value;
+    if (pass !== conf) { showAlert('Passwords do not match.'); return; }
+    btn.disabled = true; btn.textContent = 'Creating account…';
+    try {
+      await API.Auth.registerUser({
+        name:     document.getElementById('regName').value.trim(),
+        username: document.getElementById('regUsername').value.trim(),
+        email:    document.getElementById('regEmail').value.trim(),
+        phone:    document.getElementById('regPhone').value.trim(),
+        password: pass,
+      });
+      Toast.success('Account created! Redirecting…');
+      setTimeout(() => window.location.href = 'public-dashboard.html', 800);
+    } catch (err) {
+      showAlert(err.message || 'Registration failed. Please try again.');
+      btn.disabled = false; btn.textContent = 'Create My Account';
+    }
+  });
+</script>
+</body>
+</html>
