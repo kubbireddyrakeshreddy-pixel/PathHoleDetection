@@ -110,6 +110,20 @@ def save_upload(file) -> str:
     filename = f"{uuid.uuid4().hex}.{ext}"
     path     = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     file.save(path)
+    
+    # Resize image to prevent PyTorch Out-of-Memory (OOM) on Render's 512MB tier
+    try:
+        import cv2
+        img = cv2.imread(path)
+        if img is not None:
+            h, w = img.shape[:2]
+            if max(h, w) > 800:
+                scale = 800 / max(h, w)
+                img = cv2.resize(img, (int(w * scale), int(h * scale)))
+                cv2.imwrite(path, img)
+    except Exception as e:
+        print(f"Resize failed: {e}")
+        
     return path, filename
 
 
