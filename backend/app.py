@@ -38,6 +38,7 @@ from flask_jwt_extended import (
     jwt_required, get_jwt_identity, get_jwt,
 )
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import cloudinary
 import cloudinary.uploader
@@ -85,6 +86,36 @@ db.init_app(app)
 jwt = JWTManager(app)
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+def seed_admins():
+    with app.app_context():
+        try:
+            db.create_all()
+            if not Admin.query.filter_by(email='vinnurakesh2446@gmail.com').first():
+                a1 = Admin(email='vinnurakesh2446@gmail.com', password_hash=generate_password_hash('Vinnu@123'),
+                           name='Rakesh Reddy', department='Nalgonda Municipal Corp', phone='9059581270',
+                           lat_min=16.5, lat_max=17.5, lng_min=78.5, lng_max=79.5)
+                db.session.add(a1)
+            
+            if not Admin.query.filter_by(email='srikarreddy465@gmail.com').first():
+                a2 = Admin(email='srikarreddy465@gmail.com', password_hash=generate_password_hash('Srikar1234'),
+                           name='Srikar Reddy', department='Chennai Municipal Corp', phone='9059581270',
+                           lat_min=12.8, lat_max=13.3, lng_min=80.0, lng_max=80.4)
+                db.session.add(a2)
+                
+            # Super Admin
+            if not Admin.query.filter_by(email='kubbireddyrakeshreddy@gmail.com').first():
+                a3 = Admin(email='kubbireddyrakeshreddy@gmail.com', password_hash=generate_password_hash('R1234'),
+                           name='Rakesh Reddy', department='Super Admin', phone='9059581270',
+                           lat_min=None, lat_max=None, lng_min=None, lng_max=None)
+                db.session.add(a3)
+                
+            db.session.commit()
+            print("[DB] Admin accounts seeded successfully!")
+        except Exception as e:
+            print("[DB] Admin seed error:", e)
+
+seed_admins()
 
 # ── Load ML model ──────────────────────────────────────────────────────────
 MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(__file__), "best.pt"))
@@ -360,14 +391,18 @@ def create_report():
     if result["pothole_detected"] and admin:
         import threading
         import sys
-        def send_email_async(rep, adm, img_path):
-            try:
-                email_service.send_pothole_alert(rep, adm, img_path)
-                sys.stdout.flush()
-            except Exception as e:
-                print(f"[Email Thread Error] {e}", flush=True)
+        def send_email_async(rep_id, adm_id, img_path):
+            with app.app_context():
+                try:
+                    rep = Report.query.get(rep_id)
+                    adm = Admin.query.get(adm_id)
+                    if rep and adm:
+                        email_service.send_pothole_alert(rep, adm, img_path)
+                        sys.stdout.flush()
+                except Exception as e:
+                    print(f"[Email Thread Error] {e}", flush=True)
         
-        threading.Thread(target=send_email_async, args=(report, admin, ann_path)).start()
+        threading.Thread(target=send_email_async, args=(report.id, admin.id, ann_path)).start()
 
     return jsonify({
         "report":           report.to_dict(include_logs=True),
