@@ -111,11 +111,31 @@ def seed_admins():
             a3.password_hash = generate_password_hash('R1234')
 
             db.session.commit()
-            print("[DB] Admin accounts seeded & passwords synchronized!")
         except Exception as e:
             print("[DB] Admin seed error:", e)
 
+def seed_users():
+    with app.app_context():
+        try:
+            u1 = User.query.filter_by(email='vardhantnk@gmail.com').first()
+            if not u1:
+                u1 = User(name='Harsha Vardhan', username='Harsha123', email='vardhantnk@gmail.com', phone='9059581270')
+                db.session.add(u1)
+            u1.password_hash = generate_password_hash('harsha123456')
+
+            u2 = User.query.filter_by(email='testuser@gmail.com').first()
+            if not u2:
+                u2 = User(name='Test Citizen', username='testcitizen', email='testuser@gmail.com', phone='1234567890')
+                db.session.add(u2)
+            u2.password_hash = generate_password_hash('Test@123')
+
+            db.session.commit()
+            print("[DB] Citizen test accounts seeded & passwords synchronized!")
+        except Exception as e:
+            print("[DB] User seed error:", e)
+
 seed_admins()
+seed_users()
 
 # ── Load ML model ──────────────────────────────────────────────────────────
 MODEL_PATH = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(__file__), "best.pt"))
