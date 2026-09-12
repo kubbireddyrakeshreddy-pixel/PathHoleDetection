@@ -25,17 +25,26 @@ def load_model(model_path: str = "best.pt"):
     """Load YOLO weights into memory."""
     global _model
     
-    # Always resolve best.pt relative to the backend folder
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    absolute_model_path = os.path.join(base_dir, model_path)
+    candidates = [
+        model_path,
+        os.path.join(base_dir, model_path),
+        os.path.join(base_dir, os.path.basename(model_path))
+    ]
     
-    if not os.path.exists(absolute_model_path):
+    target_path = None
+    for cand in candidates:
+        if cand and os.path.exists(cand) and os.path.isfile(cand):
+            target_path = cand
+            break
+
+    if not target_path:
         raise FileNotFoundError(
-            f"Model weights not found at '{absolute_model_path}'. "
-            "Please run the Colab segmentation notebook and place best.pt in the backend/ folder."
+            f"Model weights not found at '{model_path}'. "
+            "Please place best.pt in the backend/ folder."
         )
-    _model = YOLO(absolute_model_path)
-    print(f"[Detector] Segmentation Model loaded from '{absolute_model_path}'")
+    _model = YOLO(target_path)
+    print(f"[Detector] Segmentation Model loaded from '{target_path}'")
 
 
 def detect(image_path: str, confidence_threshold: float = 0.40):
