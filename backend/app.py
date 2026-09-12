@@ -79,7 +79,7 @@ app.config["JWT_TOKEN_LOCATION"] = ["headers", "query_string"]
 app.config["JWT_QUERY_STRING_NAME"] = "token"
 app.config["UPLOAD_FOLDER"]          = os.path.join(os.path.dirname(__file__), "uploads")
 app.config["MAX_CONTENT_LENGTH"]     = int(os.getenv("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))
-CONFIDENCE_THRESHOLD                 = float(os.getenv("CONFIDENCE_THRESHOLD", 0.40))
+CONFIDENCE_THRESHOLD                 = float(os.getenv("CONFIDENCE_THRESHOLD", 0.55))
 ALLOWED_EXTENSIONS                   = {"jpg", "jpeg", "png", "gif", "webp"}
 
 db.init_app(app)
