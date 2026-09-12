@@ -108,6 +108,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderReportRow(r) {
     const mapsUrl = StatusHelper.gmapsUrl(r.latitude, r.longitude);
+    const currentUser = API.getUser();
+    const isSuperAdmin = currentUser && currentUser.email === 'kubbireddyrakeshreddy@gmail.com';
+
     return `
     <div class="glass-card" style="padding:20px;margin-bottom:16px" id="report-${r.id}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
@@ -143,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${r.status !== 'repaired'
           ? `<button class="btn btn-ghost btn-sm" onclick="openStatusModal(${r.id},'${r.status}','${(r.admin_notes||'').replace(/'/g,"\\'")}')">📝 Add Notes</button>` : ''}
         <a href="${mapsUrl}" target="_blank" class="btn btn-ghost btn-sm">📍 View on Map</a>
-        <button class="btn btn-danger btn-sm delete-btn" data-id="${r.id}">🗑 Delete</button>
+        ${isSuperAdmin ? `<button class="btn btn-danger btn-sm delete-btn" data-id="${r.id}">🗑 Delete</button>` : ''}
       </div>
     </div>`;
   }
@@ -171,11 +174,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const id = btn.dataset.id;
         btn.disabled = true; btn.textContent = 'Deleting...';
         try {
-          await API.Admin.deleteReport(id);
+          const adminApi = API.Admin || API.AdminAPI;
+          await adminApi.deleteReport(id);
           Toast.success('Report deleted successfully');
           loadStats(); loadReports();
         } catch (e) {
-          Toast.error(e.message);
+          Toast.error(e.message || 'Failed to delete report.');
           btn.disabled = false; btn.textContent = '🗑 Delete';
         }
       });

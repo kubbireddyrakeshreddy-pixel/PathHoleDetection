@@ -107,7 +107,7 @@ const API = (() => {
 
   // ── Expose ────────────────────────────────────────────────────────────
   return {
-    Auth, Reports, AdminAPI, imageUrl,
+    Auth, Reports, Admin: AdminAPI, AdminAPI, imageUrl,
     getUser, getRole,
   };
 })();
